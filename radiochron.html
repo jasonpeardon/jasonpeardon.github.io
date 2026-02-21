@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exol | Global Grey Line & Asset Monitor</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root {
+            --exol-yellow: #ffff00; /* New Yellow Theme */
+            --bg-dark: #0a0e14;
+            --panel-bg: rgba(16, 22, 30, 0.9);
+        }
+
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg-dark); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #map { height: 100vh; width: 100%; background: var(--bg-dark); }
+
+        /* Dashboard Moved to the Right */
+        .dashboard {
+            position: absolute;
+            top: 20px;
+            right: 20px; /* Anchored Right */
+            z-index: 1000;
+            background: var(--panel-bg);
+            color: var(--exol-yellow); /* Yellow Text */
+            padding: 20px;
+            border-radius: 4px;
+            border-right: 4px solid var(--exol-yellow); /* Border on Right */
+            width: 280px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .stat-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 0.9em; }
+        .stat-label { color: #8899a6; }
+        .stat-value { font-weight: bold; font-family: monospace; color: var(--exol-yellow); }
+        
+        h2 { margin: 0 0 15px 0; font-size: 1.2em; letter-spacing: 1px; color: var(--exol-yellow); border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .section-title { font-size: 0.7em; text-transform: uppercase; color: #777; margin-top: 15px; border-top: 1px solid #222; padding-top: 10px; }
+
+        .asset-marker {
+            background: var(--exol-yellow);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 10px var(--exol-yellow);
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <h2>EXOL OPS MONITOR</h2>
+    
+    <div class="stat-row">
+        <span class="stat-label">UTC TIME</span>
+        <span class="stat-value" id="clock">--:--:--</span>
+    </div>
+
+    <div class="section-title">Solar Environment</div>
+    <div class="stat-row">
+        <span class="stat-label">Planetary Kp-Index</span>
+        <span class="stat-value" id="kp-val">FETCHING...</span>
+    </div>
+    <div class="stat-row">
+        <span class="stat-label">X-Ray Flux</span>
+        <span class="stat-value" id="xray-val">FETCHING...</span>
+    </div>
+
+    <div class="section-title">Asset Status</div>
+    <div id="asset-list">
+        <div class="stat-row"><span class="stat-label">Atlanta</span> <span class="stat-value">Active</span></div>
+        <div class="stat-row"><span class="stat-label">Bristol</span> <span class="stat-value">Active</span></div>
+        <div class="stat-row"><span class="stat-label">HQ</span> <span class="stat-value">Active</span></div>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/joergdietrich/Leaflet.Terminator/L.Terminator.js"></script>
+
+<script>
+    // 1. Map Initialization
+    const map = L.map('map', {
+        worldCopyJump: true,
+        center: [20, -20],
+        zoom: 3,
+        minZoom: 2
+    });
+
+    // Dark UI Tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(map);
+
+    // 2. Assets Definition
+    const assets = [
+        { name: "Atlanta Facility", coords: [33.7490, -84.3880], type: "Logistics Hub" },
+        { name: "Bristol Site", coords: [43.9584, -69.5084], type: "Ag-Tech" },
+        { name: "HQ / Boston", coords: [42.3601, -71.0589], type: "Data Center" }
+    ];
+
+    // Add Assets to Map
+    assets.forEach(asset => {
+        L.marker(asset.coords, {
+            icon: L.divIcon({ className: 'asset-marker', iconSize: [12, 12] })
+        }).addTo(map).bindTooltip(`<b>${asset.name}</b><br>${asset.type}`);
+    });
+
+    // 3. Terminator & Propagation Zones
+    let mainTerminator, propZonePlus, propZoneMinus;
+
+    function updateTerminator() {
+        if (mainTerminator) {
+            map.removeLayer(mainTerminator);
+            map.removeLayer(propZonePlus);
+            map.removeLayer(propZoneMinus);
+        }
+
+        // Yellow tinted propagation buffer
+        const commonStyle = { color: 'transparent', fillOpacity: 0.15, fillColor: '#ffff00' };
+
+        // Main shadow
+        mainTerminator = L.terminator({
+            fillColor: '#000',
+            fillOpacity: 0.6,
+            color: '#ffff00', // Yellow line edge
+            weight: 1
+        }).addTo(map);
+
+        // Propagation zones (±7.5 degrees from the line)
+        propZonePlus = L.terminator({ ...commonStyle, offset: 7.5 }).addTo(map);
+        propZoneMinus = L.terminator({ ...commonStyle, offset: -7.5 }).addTo(map);
+        
+        document.getElementById('clock').innerText = new Date().toUTCString().split(' ')[4];
+    }
+
+    // 4. Solar Data Fetching (NOAA)
+    async function fetchSolarData() {
+        try {
+            const kpRes = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+            const kpData = await kpRes.json();
+            const latestKp = kpData[kpData.length - 1][1];
+            const kpEl = document.getElementById('kp-val');
+            kpEl.innerText = latestKp;
+            // Highlight red only if severe, otherwise yellow
+            kpEl.style.color = latestKp >= 5 ? '#ff4444' : '#ffff00';
+
+            const xrRes = await fetch('https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json');
+            const xrData = await xrRes.json();
+            const latestXr = xrData[xrData.length - 1].flux;
+            document.getElementById('xray-val').innerText = latestXr.toExponential(2);
+        } catch (e) {
+            console.error("Data fetch error:", e);
+        }
+    }
+
+    updateTerminator();
+    fetchSolarData();
+    setInterval(updateTerminator, 60000);
+    setInterval(fetchSolarData, 300000);
+</script>
+
+</body>
+</html>
