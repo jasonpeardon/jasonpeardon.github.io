@@ -3,169 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exol | Global Grey Line & Asset Monitor</title>
+    <title>Exol | Global Grey Line Monitor</title>
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        :root {
-            --exol-yellow: #ffff00;
-            --bg-dark: #0a0e14;
-            --panel-bg: rgba(16, 22, 30, 0.95);
-        }
-
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg-dark); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
-        #map { height: 100vh; width: 100%; background: var(--bg-dark); z-index: 1; }
+        :root { --exol-yellow: #ffff00; --panel-bg: rgba(10, 15, 20, 0.9); }
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; font-family: sans-serif; overflow: hidden; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
 
         .dashboard {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 2000;
-            background: var(--panel-bg);
-            color: var(--exol-yellow);
-            padding: 20px;
-            border-radius: 4px;
-            border-right: 4px solid var(--exol-yellow);
-            width: 280px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            position: absolute; top: 20px; right: 20px; z-index: 2000;
+            background: var(--panel-bg); color: var(--exol-yellow);
+            padding: 15px; border-radius: 4px; border-right: 4px solid var(--exol-yellow);
+            width: 250px; box-shadow: 0 0 20px rgba(0,0,0,1);
         }
-
-        .stat-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 0.9em; }
-        .stat-label { color: #8899a6; text-transform: uppercase; font-size: 0.75em; }
-        .stat-value { font-weight: bold; font-family: 'Courier New', Courier, monospace; color: var(--exol-yellow); }
-        
-        h2 { margin: 0 0 15px 0; font-size: 1.2em; letter-spacing: 2px; color: var(--exol-yellow); border-bottom: 1px solid #444; padding-bottom: 10px; }
-        .section-title { font-size: 0.7em; text-transform: uppercase; color: #555; margin-top: 15px; border-top: 1px solid #222; padding-top: 10px; }
-
-        .asset-marker {
-            background: var(--exol-yellow);
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 15px var(--exol-yellow);
-        }
+        .stat-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.85em; }
+        .stat-label { color: #888; text-transform: uppercase; }
+        .stat-value { font-family: monospace; font-weight: bold; }
+        h2 { margin: 0 0 10px 0; font-size: 1.1em; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .asset-marker { background: var(--exol-yellow); width: 10px; height: 10px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px var(--exol-yellow); }
     </style>
 </head>
 <body>
 
 <div class="dashboard">
     <h2>EXOL OPS MONITOR</h2>
-    
-    <div class="stat-row">
-        <span class="stat-label">System Time (UTC)</span>
-        <span class="stat-value" id="clock">INITIALIZING...</span>
-    </div>
-
-    <div class="section-title">Solar Environment</div>
-    <div class="stat-row">
-        <span class="stat-label">Planetary Kp-Index</span>
-        <span class="stat-value" id="kp-val">WAITING...</span>
-    </div>
-    <div class="stat-row">
-        <span class="stat-label">X-Ray Flux</span>
-        <span class="stat-value" id="xray-val">WAITING...</span>
-    </div>
-
-    <div class="section-title">Infrastructure Status</div>
-    <div id="asset-list">
-        <div class="stat-row"><span class="stat-label">Atlanta Facility</span> <span class="stat-value">ONLINE</span></div>
-        <div class="stat-row"><span class="stat-label">Bristol Site</span> <span class="stat-value">ONLINE</span></div>
-    </div>
+    <div class="stat-row"><span class="stat-label">UTC</span> <span class="stat-value" id="clock">--:--:--</span></div>
+    <div class="stat-row"><span class="stat-label">Kp-Index</span> <span class="stat-value" id="kp-val">...</span></div>
+    <div class="stat-row"><span class="stat-label">X-Ray</span> <span class="stat-value" id="xray-val">...</span></div>
+    <div style="font-size: 0.7em; color: #444; margin-top: 10px;">Status: Atlanta/Bristol ONLINE</div>
 </div>
 
 <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/@joergdietrich/leaflet.terminator/L.Terminator.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@joergdietrich/leaflet.terminator@1.3.0/L.Terminator.min.js"></script>
 
 <script>
-    let map, mainTerminator, propZonePlus, propZoneMinus;
+    let map, terminatorLayer, propZone;
 
-    // 1. Initialize Map
-    function initMap() {
-        map = L.map('map', {
-            worldCopyJump: true,
-            center: [20, -30],
-            zoom: 3,
-            minZoom: 2
-        });
+    function init() {
+        // Create Map
+        map = L.map('map', { center: [20, 0], zoom: 3, worldCopyJump: true });
 
+        // Add Dark Tiles
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© CARTO'
+            attribution: '&copy; CARTO'
         }).addTo(map);
 
-        const assets = [
-            { name: "Atlanta Facility", coords: [33.7490, -84.3880] },
-            { name: "Bristol Site", coords: [43.9584, -69.5084] }
-        ];
-
-        assets.forEach(asset => {
-            L.marker(asset.coords, {
-                icon: L.divIcon({ className: 'asset-marker', iconSize: [12, 12] })
-            }).addTo(map).bindTooltip(asset.name);
+        // Add Assets
+        const sites = [{n: "Atlanta", c:[33.7, -84.3]}, {n: "Bristol", c:[43.9, -69.5]}];
+        sites.forEach(s => {
+            L.marker(s.c, { icon: L.divIcon({className: 'asset-marker'}) }).addTo(map).bindTooltip(s.n);
         });
 
-        updateTerminator();
-        fetchSolarData();
-        
-        // Refresh loops
-        setInterval(updateTerminator, 1000); // Clock updates every second
-        setInterval(fetchSolarData, 300000); // Solar data every 5 mins
+        // Start Loops
+        updateTimeAndMap();
+        fetchSolar();
+        setInterval(updateTimeAndMap, 1000);
+        setInterval(fetchSolar, 300000);
     }
 
-    // 2. Terminator Logic
-    function updateTerminator() {
+    function updateTimeAndMap() {
         const now = new Date();
-        document.getElementById('clock').innerText = now.toISOString().split('T')[1].split('.')[0];
+        document.getElementById('clock').innerText = now.toISOString().substr(11, 8);
 
-        if (mainTerminator) {
-            map.removeLayer(mainTerminator);
-            map.removeLayer(propZonePlus);
-            map.removeLayer(propZoneMinus);
-        }
+        if (terminatorLayer) map.removeLayer(terminatorLayer);
+        if (propZone) map.removeLayer(propZone);
 
-        const commonStyle = { color: 'transparent', fillOpacity: 0.1, fillColor: '#ffff00' };
-
-        mainTerminator = L.terminator({
-            fillColor: '#000',
-            fillOpacity: 0.6,
-            color: '#ffff00',
-            weight: 1
+        // Draw Grey Line
+        terminatorLayer = L.terminator({
+            fillColor: '#000', fillOpacity: 0.5, color: '#ffff00', weight: 1.5
         }).addTo(map);
 
-        propZonePlus = L.terminator({ ...commonStyle, offset: 7.5 }).addTo(map);
-        propZoneMinus = L.terminator({ ...commonStyle, offset: -7.5 }).addTo(map);
+        // Draw Propagation Buffer
+        propZone = L.terminator({
+            offset: 7.5, fillColor: '#ffff00', fillOpacity: 0.05, color: 'transparent'
+        }).addTo(map);
     }
 
-    // 3. Robust Solar Data Fetch
-    async function fetchSolarData() {
+    async function fetchSolar() {
         try {
-            const kpRes = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
-            if (kpRes.ok) {
-                const kpData = await kpRes.json();
-                const val = kpData[kpData.length - 1][1];
-                document.getElementById('kp-val').innerText = val;
-                document.getElementById('kp-val').style.color = val >= 5 ? '#ff4444' : '#ffff00';
-            }
+            // Using a public CORS proxy to ensure GitHub doesn't block the request
+            const proxy = "https://api.allorigins.win/raw?url=";
+            
+            const kpUrl = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json";
+            const kpRes = await fetch(proxy + encodeURIComponent(kpUrl));
+            const kpData = await kpRes.json();
+            const kp = kpData[kpData.length - 1][1];
+            document.getElementById('kp-val').innerText = kp;
+            document.getElementById('kp-val').style.color = kp >= 5 ? '#ff4444' : '#ffff00';
 
-            const xrRes = await fetch('https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json');
-            if (xrRes.ok) {
-                const xrData = await xrRes.json();
-                const val = xrData[xrData.length - 1].flux;
-                document.getElementById('xray-val').innerText = val.toExponential(2);
-            }
+            const xrUrl = "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json";
+            const xrRes = await fetch(proxy + encodeURIComponent(xrUrl));
+            const xrData = await xrRes.json();
+            const xr = xrData[xrData.length - 1].flux;
+            document.getElementById('xray-val').innerText = xr.toExponential(1);
         } catch (e) {
-            console.error("Fetch failed (likely CORS):", e);
-            document.getElementById('kp-val').innerText = "OFFLINE";
+            console.log("Solar fetch error", e);
         }
     }
 
-    // Execute once everything is loaded
-    window.onload = initMap;
+    // Run when window loads
+    window.onload = init;
 </script>
-
 </body>
 </html>
