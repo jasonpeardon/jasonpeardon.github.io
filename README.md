@@ -3,116 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exol | Global Grey Line Monitor</title>
+    <title>Exol | Global Ops Monitor</title>
     
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        :root { --exol-yellow: #ffff00; --panel-bg: rgba(10, 15, 20, 0.95); }
-        body, html { margin: 0; padding: 0; height: 100%; background: #000; font-family: sans-serif; overflow: hidden; }
-        #map { height: 100vh; width: 100%; z-index: 1; background: #000; }
+        :root { --exol-yellow: #ffff00; --panel-bg: rgba(10, 15, 20, 0.9); }
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        
+        /* Ensure the map container has a physical size */
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; background: #000; z-index: 1; }
 
         .dashboard {
             position: absolute; top: 20px; right: 20px; z-index: 2000;
             background: var(--panel-bg); color: var(--exol-yellow);
-            padding: 15px; border-radius: 4px; border-right: 4px solid var(--exol-yellow);
-            width: 260px; box-shadow: 0 0 20px rgba(0,0,0,1);
+            padding: 20px; border-radius: 4px; border-right: 4px solid var(--exol-yellow);
+            width: 250px; box-shadow: 0 0 30px rgba(0,0,0,1); pointer-events: none;
         }
-        .stat-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.85em; }
-        .stat-label { color: #888; text-transform: uppercase; }
-        .stat-value { font-family: 'Courier New', monospace; font-weight: bold; }
-        h2 { margin: 0; font-size: 1.1em; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .stat-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 0.9em; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        .stat-label { color: #888; text-transform: uppercase; font-size: 0.7em; }
+        .stat-value { font-family: monospace; font-weight: bold; }
+        h2 { margin: 0 0 10px 0; font-size: 1.1em; letter-spacing: 2px; }
         .asset-marker { background: var(--exol-yellow); width: 10px; height: 10px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px var(--exol-yellow); }
     </style>
 </head>
 <body>
 
 <div class="dashboard">
-    <h2>EXOL OPS MONITOR</h2>
-    <div style="font-size: 0.6em; color: #555; margin-bottom: 10px;">REBRANDING: GREENBOX -> EXOL</div>
-    <div class="stat-row"><span class="stat-label">UTC TIME</span> <span class="stat-value" id="clock">--:--:--</span></div>
-    <div class="stat-row"><span class="stat-label">Kp-Index</span> <span class="stat-value" id="kp-val">FETCH</span></div>
-    <div class="stat-row"><span class="stat-label">X-Ray (GOES)</span> <span class="stat-value" id="xray-val">FETCH</span></div>
+    <h2>EXOL OPS</h2>
+    <div class="stat-row"><span class="stat-label">UTC</span> <span class="stat-value" id="clock">00:00:00</span></div>
+    <div class="stat-row"><span class="stat-label">Kp-Index</span> <span class="stat-value" id="kp-val">--</span></div>
+    <div class="stat-row"><span class="stat-label">X-Ray</span> <span class="stat-value" id="xray-val">--</span></div>
 </div>
 
 <div id="map"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@joergdietrich/leaflet.terminator@1.3.0/L.Terminator.min.js"></script>
-
-<script>
-    let map, terminatorLayer, propZone;
-
-    function init() {
-        // Force Zoom 2 for the global view
-        map = L.map('map', { 
-            center: [20, 0], 
-            zoom: 2, 
-            worldCopyJump: true,
-            minZoom: 2,
-            maxZoom: 10
-        });
-
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© CARTO'
-        }).addTo(map);
-
-        // Assets
-        [{n: "Atlanta", c:[33.7, -84.3]}, {n: "Bristol", c:[43.9, -69.5]}].forEach(s => {
-            L.marker(s.c, { icon: L.divIcon({className: 'asset-marker'}) }).addTo(map).bindTooltip(s.n);
-        });
-
-        updateMap();
-        fetchSolar();
-        
-        setInterval(updateMap, 1000);
-        setInterval(fetchSolar, 300000);
-    }
-
-    function updateMap() {
-        const now = new Date();
-        document.getElementById('clock').innerText = now.toISOString().substr(11, 8);
-
-        if (terminatorLayer) map.removeLayer(terminatorLayer);
-        if (propZone) map.removeLayer(propZone);
-
-        terminatorLayer = L.terminator({
-            fillColor: '#000', fillOpacity: 0.5, color: '#ffff00', weight: 1.5
-        }).addTo(map);
-
-        propZone = L.terminator({
-            offset: 7.5, fillColor: '#ffff00', fillOpacity: 0.05, color: 'transparent'
-        }).addTo(map);
-    }
-
-    async function fetchSolar() {
-        // Using corsproxy.io which is currently the most reliable for GitHub Pages
-        const proxy = "https://corsproxy.io/?";
-        const kpUrl = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json";
-        const xrUrl = "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json";
-
-        try {
-            const res = await fetch(proxy + encodeURIComponent(kpUrl));
-            const data = await res.json();
-            const val = data[data.length - 1][1];
-            document.getElementById('kp-val').innerText = val;
-            document.getElementById('kp-val').style.color = val >= 5 ? '#ff4444' : '#ffff00';
-        } catch (e) { 
-            document.getElementById('kp-val').innerText = "OFFLINE";
-        }
-
-        try {
-            const res = await fetch(proxy + encodeURIComponent(xrUrl));
-            const data = await res.json();
-            const filtered = data.filter(d => d.energy === '0.1-0.8nm');
-            const val = filtered[filtered.length - 1].flux;
-            document.getElementById('xray-val').innerText = val.toExponential(1);
-        } catch (e) { 
-            document.getElementById('xray-val').innerText = "OFFLINE";
-        }
-    }
-
-    window.onload = init;
-</script>
-</body>
-</html>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="
