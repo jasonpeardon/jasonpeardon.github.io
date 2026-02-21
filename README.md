@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exol | Global Grey Line Monitor</title>
+    <title>Hamchron | Global Grey Line Monitor</title>
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     
@@ -28,7 +28,7 @@
 <body>
 
 <div class="dashboard">
-    <h2>EXOL OPS MONITOR</h2>
+    <h2>HAM OPS MONITOR</h2>
     <div class="stat-row"><span class="stat-label">UTC</span> <span class="stat-value" id="clock">--:--:--</span></div>
     <div class="stat-row"><span class="stat-label">Kp-Index</span> <span class="stat-value" id="kp-val">...</span></div>
     <div class="stat-row"><span class="stat-label">X-Ray (GOES)</span> <span class="stat-value" id="xray-val">...</span></div>
