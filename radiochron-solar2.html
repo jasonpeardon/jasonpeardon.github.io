@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exol | Force-Load Ops Monitor</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        /* This forces the browser to give the map space */
+        html, body { 
+            margin: 0; padding: 0; width: 100vw; height: 100vh; 
+            background-color: #050505; color: #ffcc00;
+            overflow: hidden; font-family: 'Courier New', monospace;
+        }
+
+        #map { 
+            width: 100vw !important; 
+            height: 100vh !important; 
+            position: absolute; top: 0; left: 0; z-index: 1;
+        }
+
+        .dashboard {
+            position: absolute; top: 20px; right: 20px; z-index: 1000;
+            background: rgba(0, 0, 0, 0.9); padding: 15px;
+            border: 2px solid #ffcc00; width: 185px;
+            text-align: center; box-shadow: 0 0 15px rgba(255, 204, 0, 0.5);
+        }
+
+        h2 { margin: 0 0 10px 0; font-size: 0.9em; border-bottom: 1px solid #ffcc00; padding-bottom: 5px; }
+        
+        /* This filter turns standard maps into a dark "NOC" theme */
+        .leaflet-container {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+            background: #000 !important;
+        }
+
+        #status-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 9999; color: #ffcc00; text-align: center; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="status-overlay">INITIALIZING SENSORS...</div>
+
+<div class="dashboard">
+    <h2>SOLAR STATUS</h2>
+    <a href="https://www.hamqsl.com/solar.html" target="_blank">
+        <img src="https://www.hamqsl.com/solar100sc.php" style="width:175px; border:1px solid #333;" alt="Solar Data">
+    </a>
+    <div style="font-size: 0.7em; margin-top: 10px;">UTC: <span id="clock">00:00</span></div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.terminator@0.1.0/L.Terminator.js"></script>
+
+<script>
+    window.onload = function() {
+        const overlay = document.getElementById('status-overlay');
+        
+        // Step 1: Check if libraries loaded
+        if (typeof L === 'undefined') {
+            overlay.innerHTML = "ERROR: LEAFLET LIBRARY BLOCKED<br>Check internet/firewall.";
+            return;
+        }
+
+        try {
+            // Step 2: Initialize Map
+            const
