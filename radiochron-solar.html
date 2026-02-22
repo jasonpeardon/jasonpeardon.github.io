@@ -3,91 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exol | Solar Ops Monitor</title>
+    <title>Exol | Solar Terminator Monitor</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
+        /* Essential: Force the body and map to 100% height */
         html, body { 
-            margin: 0; padding: 0; height: 100%; width: 100%; 
-            background-color: #000; color: #ffcc00;
-            font-family: 'Courier New', Courier, monospace;
-            overflow: hidden;
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            width: 100%; 
+            background-color: #000; 
         }
 
-        /* The Map container - using fixed positioning to prevent 'zero height' bugs */
         #map { 
-            position: fixed; top: 0; left: 0; 
-            width: 100vw; height: 100vh; 
-            z-index: 1; background: #050505; 
+            height: 100%; 
+            width: 100%; 
+            background: #050505; 
         }
 
+        /* Dashboard on the RIGHT */
         .dashboard {
-            position: absolute; top: 20px; right: 20px; z-index: 1000;
-            background: rgba(0, 0, 0, 0.9); padding: 10px;
-            border: 2px solid #ffcc00; width: 185px;
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.9); 
+            padding: 15px;
+            border: 2px solid #ffcc00; 
+            width: 185px;
             box-shadow: 0 0 15px rgba(255, 204, 0, 0.5);
             text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+            color: #ffcc00;
         }
 
-        h2 { margin: 0 0 10px 0; font-size: 0.9em; border-bottom: 1px solid #ffcc00; padding-bottom: 5px; }
-
-        .solar-image {
-            width: 175px; height: auto; border: 1px solid #333; margin-bottom: 5px;
+        h2 { 
+            margin: 0 0 10px 0; 
+            font-size: 0.9em; 
+            border-bottom: 1px solid #ffcc00; 
+            padding-bottom: 5px; 
         }
 
-        /* Dark mode filter for the map tiles */
-        .leaflet-container {
-            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-        }
-    </style>
-</head>
-<body>
-
-<div class="dashboard">
-    <h2>SOLAR STATUS</h2>
-    <img src="https://www.hamqsl.com/solar100sc.php" class="solar-image" alt="Solar Data">
-    <div style="font-size: 0.7em; opacity: 0.8;">UTC: <span id="utc-clock">--:--</span></div>
-</div>
-
-<div id="map"></div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script>
-    // Wait for the window to fully load
-    window.onload = function() {
-        // 1. Initialize Map
-        var map = L.map('map', { 
-            center: [20, 0], zoom: 2, 
-            zoomControl: false, attributionControl: false 
-        });
-
-        // 2. Load standard tiles (Highly reliable)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-        // 3. Manual Grey Line Calculation (No plugins needed)
-        var greyLine;
-        function drawGreyLine() {
-            if (greyLine) map.removeLayer(greyLine);
-
-            var now = new Date();
-            var julianDay = (now / 86400000) - (now.getTimezoneOffset() / 1440) + 2440587.5;
-            var t = (julianDay - 2451545.0) / 36525;
-            var L0 = 280.46646 + 36000.76983 * t + 0.0003032 * t * t;
-            var M = 357.52911 + 35999.05029 * t - 0.0001537 * t * t;
-            var e = 0.016708634 - 0.000042037 * t;
-            var C = (1.914602 - 0.004817 * t) * Math.sin(M * Math.PI / 180);
-            var sunLong = L0 + C;
-            var epsilon = 23.43929 - 0.0130041 * t;
-            var dec = Math.asin(Math.sin(epsilon * Math.PI / 180) * Math.sin(sunLong * Math.PI / 180)) * 180 / Math.PI;
-            var gha = ( (now.getUTCHours() + (now.getUTCMinutes() / 60) + (now.getUTCSeconds() / 3600)) * 15 );
-
-            var points = [];
-            for (var lon = -180; lon <= 180; lon += 2) {
-                var lat = Math.atan(-Math.cos((lon + gha + 180) * Math.PI / 180) / Math.tan(dec * Math.PI / 180)) * 180 / Math.PI;
-                points.push([lat, lon]);
-            }
-            
-            // Draw the line
-            greyLine = L.polyline(points, { color: '#ffcc
+        .solar-banner {
+            width: 175px;
+            height: auto;
+            border: 1px solid #333;
