@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exol | Solar Ops Monitor</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            width: 100%; 
+            background-color: #000; 
+            color: #ffcc00;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+        }
+
+        #map { 
+            height: 100vh; 
+            width: 100vw; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .dashboard {
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.9); 
+            padding: 15px;
+            border: 2px solid #ffcc00; 
+            width: 180px; /* Adjusted to fit the solar banner width */
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+            text-align: center;
+        }
+
+        h2 { 
+            margin: 0 0 10px 0; 
+            font-size: 1em; 
+            border-bottom: 2px solid #ffcc00; 
+            padding-bottom: 5px; 
+        }
+
+        /* Container for the Solar Banner */
+        .solar-container {
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        /* Gray Line Overlay Style */
+        .leaflet-terminator {
+            fill-opacity: 0.5;
+            fill-color: #000;
+        }
+
+        #error-msg {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #ffcc00; z-index: 9999; text-align: center; display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="error-msg">
+    <h2>SYSTEM ERROR</h2>
+    <p>MAP LIBRARY NOT DETECTED</
