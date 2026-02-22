@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exol | World Clock Monitor</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        /* Force the body to be full screen */
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            width: 100%; 
+            background-color: #000; 
+            color: #ffcc00;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+        }
+
+        /* The Map container must have an explicit height and width */
+        #map { 
+            height: 100vh; 
+            width: 100vw; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .dashboard {
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            z-index: 1000; /* Ensure it stays above the map */
+            background: rgba(0, 0, 0, 0.85); 
+            padding: 20px;
+            border: 2px solid #ffcc00; 
+            width: 260px;
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+            pointer-events: none; /* Allows you to click through the dashboard to the map */
+        }
+
+        h2 { 
+            margin: 0 0 15px 0; 
+            font-size: 1.2em; 
+            text-align: center; 
+            border-bottom: 2px solid #ffcc00; 
+            padding-bottom: 10px; 
+        }
+
+        .clock-row { 
+            display: flex; 
+            justify-content: space-between; 
+            margin: 12px 0; 
+            font-size: 0.9em; 
+            border-bottom: 1px dotted #444;
+        }
+
+        .city { color: #aa8800; font-weight: bold; }
+        .time { font-weight: bold; color: #ffcc00; }
+
+        /* Error message if Leaflet fails to load */
+        #error-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            z-index: 9999;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="error-msg">
+    <h2>CRITICAL ERROR</h2>
+    <p>Map Library (Leaflet) failed to load.<br>Check internet connection or firewall settings.</p>
+</div>
+
+<div class="dashboard">
+    <h2>EXOL WORLD CLOCK</h2>
+    <div class="clock-row"><span class="city">UTC</span><span class="time" id="utc">--:--:--</span></div>
+    <div class="clock-row"><span class="city">NEW YORK</span><span class="time" id="nyc">--:--:--</span></div>
+    <div class="clock-row"><span class="city">LOS ANGELES</span><span class="time" id="lax">--:--:--</span></div>
+    <div class="clock-row"><span class="city">TOKYO</span><span class="time" id="tky">--:--:--</span></div>
+    <div class="clock-row"><span class="city">MOSCOW</span><span class="time" id="mow">--:--:--</span></div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    window.onload = function() {
+        // 1. Safety check for Leaflet
+        if (typeof L === 'undefined') {
+            document.getElementById('error-msg').style.display = 'block';
+            return;
+        }
+
+        // 2. Initialize the map
+        try {
+            var map = L.map('map', { 
+                center: [20, 0], 
+                zoom: 2, 
+                zoomControl: false,
+                attributionControl: false 
+            });
+
+            // Using standard OpenStreetMap tiles - very high reliability
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            // Add grayscale filter to map for the 'NOC' look via CSS
+            document.getElementById('map').style.filter = "invert(100%) hue-
