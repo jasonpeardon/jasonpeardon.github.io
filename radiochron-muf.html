@@ -3,57 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EXOL | TERMINATOR OPS</title>
+    <title>Exol | Stable Grey Line Monitor</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script src="https://unpkg.com/@joergdietrich/leaflet.terminator/L.Terminator.js"></script>
-
     <style>
-        :root { --amber: #ffcc00; --bg: #000000; }
-        body, html { margin: 0; padding: 0; height: 100vh; width: 100vw; background: var(--bg); overflow: hidden; font-family: 'Courier New', monospace; }
-        
-        /* Map Container - Forced Fullscreen */
-        #map { height: 100vh; width: 100vw; z-index: 1; }
+        body, html { margin: 0; padding: 0; height: 100%; background: #0a0e14; overflow: hidden; }
+        #map { height: 100vh; width: 100%; background: #0a0e14; }
 
         .dashboard {
-            position: absolute; top: 20px; right: 20px; z-index: 1000;
-            background: rgba(0,0,0,0.9); color: var(--amber); padding: 20px;
-            border: 2px solid var(--amber); width: 260px; pointer-events: none;
+            position: absolute; top: 20px; left: 20px; z-index: 1000;
+            background: rgba(16, 22, 30, 0.9); color: #00ffcc; padding: 20px;
+            border-radius: 4px; border-left: 4px solid #00ffcc;
+            width: 250px; font-family: sans-serif;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        h2 { margin: 0 0 10px 0; font-size: 1.1em; text-align: center; border-bottom: 1px solid var(--amber); padding-bottom: 5px; }
-        .data-point { display: flex; justify-content: space-between; font-size: 0.8em; margin: 8px 0; border-bottom: 1px dotted #333; }
-        .label { color: #886600; }
-        .val { font-weight: bold; }
-        .marker-label { background: none; border: none; color: var(--amber); font-weight: bold; text-shadow: 1px 1px #000; }
+        h2 { margin: 0 0 10px 0; font-size: 1.1em; letter-spacing: 1px; }
+        .stat { font-size: 0.85em; margin: 5px 0; display: flex; justify-content: space-between; }
+        .label { color: #8899a6; }
     </style>
 </head>
 <body>
 
 <div class="dashboard">
     <h2>EXOL OPS MONITOR</h2>
-    <div class="data-point"><span class="label">UTC:</span><span class="val" id="clk">00:00:00</span></div>
-    <div class="data-point"><span class="label">ATL MUF:</span><span class="val" id="muf">-- MHz</span></div>
-    <div class="data-point"><span class="label">SOLAR:</span><span class="val" id="solar">NOMINAL</span></div>
-    <div style="font-size: 0.7em; margin-top:15px; text-align:center; opacity:0.6;">SENSORS ACTIVE [OK]</div>
+    <div class="stat"><span class="label">UTC:</span> <span id="clock">--:--:--</span></div>
+    <div class="stat"><span class="label">Solar Kp:</span> <span id="kp">...</span></div>
+    <div class="stat"><span class="label">Status:</span> <span style="color:white">SYSTEMS NOMINAL</span></div>
 </div>
 
 <div id="map"></div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.terminator@0.1.0/L.Terminator.js"></script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 1. Map Setup
-    const map = L.map('map', { 
-        center: [20, 0], 
-        zoom: 3, 
-        zoomControl: false,
-        attributionControl: false 
+    // Initialize Map
+    const map = L.map('map', {
+        worldCopyJump: true,
+        center: [20, 0],
+        zoom: 2,
+        attributionControl: false
     });
 
-    // Dark Tiles
+    // Dark Mode Tiles
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-    // 2. Assets (Atlanta & Bristol)
-    const assets =
+    // Asset Markers (Atlanta & Bristol)
+    const assets = [
+        { name: "Atlanta Facility", coords: [33.7490, -84.3880] },
+        { name: "Bristol Site", coords: [43.9584, -69.5084] }
+    ];
+
+    assets.forEach(asset => {
