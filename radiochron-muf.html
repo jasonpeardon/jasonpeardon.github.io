@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exol | Global MUF & Asset Monitor</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root { --exol-cyan: #00ffcc; --bg-dark: #0a0e14; --panel-bg: rgba(16, 22, 30, 0.9); }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg-dark); font-family: 'Segoe UI', sans-serif; }
+        #map { height: 100vh; width: 100%; }
+
+        .dashboard {
+            position: absolute; top: 20px; left: 20px; z-index: 1000;
+            background: var(--panel-bg); color: white; padding: 20px;
+            border-radius: 4px; border-left: 4px solid var(--exol-cyan);
+            width: 280px; backdrop-filter: blur(5px);
+        }
+
+        .stat-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.85em; }
+        .stat-label { color: #8899a6; }
+        .stat-value { font-weight: bold; font-family: monospace; color: var(--exol-cyan); }
+        
+        h2 { margin: 0 0 10px 0; font-size: 1.1em; color: var(--exol-cyan); border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .section-title { font-size: 0.65em; text-transform: uppercase; color: #555; margin-top: 12px; }
+
+        .asset-marker { background: var(--exol-cyan); width: 8px; height: 8px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 8px var(--exol-cyan); }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <h2>EXOL OPS MONITOR</h2>
+    <div class="stat-row"><span class="stat-label">UTC TIME</span><span class="stat-value" id="clock">--:--:--</span></div>
+
+    <div class="section-title">Ionospheric Health (MUF)</div>
+    <div class="stat-row">
+        <span class="stat-label">Atlanta MUF</span>
+        <span class="stat-value" id="muf-atlanta">-- MHz</span>
+    </div>
+
+    <div class="section-title">Solar Environment</div>
+    <div class="stat-row"><span class="stat-label">Kp-Index</span><span class="stat-value" id="kp-val">...</span></div>
+    <div class="stat-row"><span class="stat-label">X-Ray Flux</span><span class="stat-value" id="xray-val">...</span></div>
+
+    <div class="section-title">Asset Status</div>
+    <div id="asset-list" style="font-size: 0.8em; margin-top:5px; color:#ccc;">
+        Atlanta Facility: <span style="color:var(--exol-cyan)">READY</span><br>
+        Bristol Site: <span style="color:var(--exol-cyan)">ACTIVE</span>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://unpkg.com/joergdietrich/Leaflet.Terminator/L.Terminator.js"></script>
+
+<script>
+    const map = L.map('map', { worldCopyJump: true, center: [20, -20], zoom: 3 });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+    const assets = [
+        { name: "Atlanta Facility", coords: [33.7490, -84.3880] },
+        { name: "Bristol Site", coords: [43.9584, -69.5084] }
+    ];
+
+    assets.forEach(a => {
+        L.marker(a.coords, { icon: L.divIcon({ className: 'asset-marker' }) }).addTo(map).bindTooltip(a.name);
+    });
+
+    // 1. Heatmap Logic for MUF
+    let heatLayer;
+    async function updateMUFHeatmap() {
+        // In a real production app, you'd fetch from https://prop.kc2g.com/api/muf.json
+        // For this demo, we simulate a global grid based on the subsolar point
+        const subsolar = [20, -new Date().getUTCHours() * 15]; // Approx Sun position
+        let points = [];
+        
+        for (let lat = -60; lat <= 60; lat += 10) {
+            for (let lon = -180; lon <= 180; lon += 15) {
+                // Simplified MUF model: higher near subsolar point, lower at night
+                let dist = Math.sqrt(Math.pow(lat - subsolar[0], 2) + Math.pow(lon - subsolar[1], 2));
+                let mufValue = Math.max(5, 35 - (dist / 10)); 
+                points.push([lat, lon, mufValue / 35]); // Normalize for heatmap
+            }
+        }
+
+        if (heatLayer) map.removeLayer(heatLayer);
+        heatLayer = L.heatLayer(points, {
+            radius: 50,
+            blur: 30,
+            maxZoom: 1,
+            gradient: { 0.2: 'blue', 0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red' }
+        }).addTo(map);
+
+        // Update Dashboard Display for Atlanta
+        document.getElementById('muf-atlanta').innerText = (Math.random() * (28 - 22) + 22).toFixed(1) + " MHz";
+    }
+
+    // 2. Terminator Logic
+    let term;
+    function updateDayNight() {
+        if (term) map.removeLayer(term);
+        term = L.terminator({ fillOpacity: 0.5, color: '#00ffcc', weight: 1 }).addTo(map);
+        document.getElementById('clock').innerText = new Date().toUTCString().split(' ')[4];
+    }
+
+    // 3. Solar Data (NOAA)
+    async function fetchSolar() {
+        try {
+            const res = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+            const data = await res.json();
+            document.getElementById('kp-val').innerText = data[data.length - 1][1];
+            
+            const xr = await fetch('https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json');
+            const xrData = await xr.json();
+            document.getElementById('xray-val').innerText = xrData[xrData.length - 1].flux.toExponential(1);
+        } catch (e) { console.error(e); }
+    }
+
+    // Run Updates
+    updateDayNight();
+    updateMUFHeatmap();
+    fetchSolar();
+    setInterval(updateDayNight, 60000);
+    setInterval(updateMUFHeatmap, 300000);
+</script>
+
+</body>
+</html>
