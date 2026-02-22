@@ -3,109 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exol | Robotic Logistics Platform™ Monitor</title>
+    <title>Exol | Force-Load Ops Monitor</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
-        :root {
-            --exol-dark: #0f172a;    /* Deep Slate */
-            --exol-accent: #22d3ee;  /* Bright Cyan/Blue */
-            --exol-white: #f8fafc;
-            --exol-gray: #64748b;
-        }
-
+        /* This forces the browser to give the map space */
         html, body { 
-            margin: 0; padding: 0; height: 100vh; width: 100vw; 
-            background-color: var(--exol-dark); color: var(--exol-white);
-            overflow: hidden; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0; padding: 0; width: 100vw; height: 100vh; 
+            background-color: #050505; color: #ffcc00;
+            overflow: hidden; font-family: 'Courier New', monospace;
         }
 
         #map { 
-            width: 100vw; height: 100vh; 
+            width: 100vw !important; 
+            height: 100vh !important; 
             position: absolute; top: 0; left: 0; z-index: 1;
         }
 
-        /* Exol Branded Dashboard */
         .dashboard {
-            position: absolute; top: 30px; right: 30px; z-index: 1000;
-            background: rgba(15, 23, 42, 0.95); 
-            padding: 24px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            width: 200px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
+            position: absolute; top: 20px; right: 20px; z-index: 1000;
+            background: rgba(0, 0, 0, 0.9); padding: 15px;
+            border: 2px solid #ffcc00; width: 185px;
+            text-align: center; box-shadow: 0 0 15px rgba(255, 204, 0, 0.5);
         }
 
-        .brand-header {
-            font-weight: 800;
-            font-size: 14px;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            margin-bottom: 20px;
-            color: var(--exol-white);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .brand-header span {
-            color: var(--exol-accent);
-        }
-
-        .solar-box {
-            background: #fff;
-            padding: 5px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-
-        .solar-image {
-            width: 100%; height: auto; display: block;
-        }
-
-        .status-footer {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 11px;
-            color: var(--exol-gray);
-        }
-
-        .status-dot {
-            height: 6px; width: 6px; background-color: var(--exol-accent);
-            border-radius: 50%; display: inline-block; margin-right: 5px;
-            box-shadow: 0 0 8px var(--exol-accent);
-        }
-
-        /* Map UI Filters for a Clean Logistics Look */
-        .leaflet-container {
-            background: var(--exol-dark) !important;
-        }
+        h2 { margin: 0 0 10px 0; font-size: 0.9em; border-bottom: 1px solid #ffcc00; padding-bottom: 5px; }
         
-        /* Modern Grayscale/Dark Map Filter */
-        .leaflet-tile-pane {
-            filter: brightness(0.6) invert(100%) contrast(90%) hue-rotate(180deg) saturate(0.3);
+        /* This filter turns standard maps into a dark "NOC" theme */
+        .leaflet-container {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+            background: #000 !important;
+        }
+
+        #status-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 9999; color: #ffcc00; text-align: center; pointer-events: none;
         }
     </style>
 </head>
 <body>
 
+<div id="status-overlay">INITIALIZING SENSORS...</div>
+
 <div class="dashboard">
-    <div class="brand-header">EXOL<span>.</span>OPS</div>
-    
-    <div class="solar-box">
-        <img src="https://www.hamqsl.com/solar100sc.php" class="solar-image" alt="Solar Data">
-    </div>
-
-    <div style="font-size: 12px; font-weight: 500;">
-        UTC <span id="clock" style="float: right; color: var(--exol-accent);">00:00</span>
-    </div>
-
-    <div class="status-footer">
-        <span class="status-dot"></span> PLATFORM ACTIVE
-    </div>
+    <h2>SOLAR STATUS</h2>
+    <a href="https://www.hamqsl.com/solar.html" target="_blank">
+        <img src="https://www.hamqsl.com/solar100sc.php" style="width:175px; border:1px solid #333;" alt="Solar Data">
+    </a>
+    <div style="font-size: 0.7em; margin-top: 10px;">UTC: <span id="clock">00:00</span></div>
 </div>
 
 <div id="map"></div>
@@ -115,53 +61,50 @@
 
 <script>
     window.onload = function() {
-        // Initialize Map
-        var map = L.map('map', { 
-            center: [20, 0], zoom: 2.5, 
-            zoomControl: false, attributionControl: false 
-        });
-
-        // Use standard high-reliability tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-        // Grey Line (Terminator)
-        var t = L.terminator({
-            color: '#22d3ee', // Exol Accent Blue
-            fillColor: '#0f172a', // Exol Dark Slate
-            fillOpacity: 0.6,
-            weight: 1
-        }).addTo(map);
-
-        // Asset Markers for Atlanta and Bristol
-        const facilities = [
-            { name: "ATLANTA FACILITY", pos: [33.749, -84.388] },
-            { name: "BRISTOL SITE", pos: [43.958, -69.508] }
-        ];
-
-        facilities.forEach(f => {
-            L.circleMarker(f.pos, {
-                color: '#22d3ee',
-                fillColor: '#22d3ee',
-                fillOpacity: 0.8,
-                radius: 4
-            }).addTo(map).bindTooltip(f.name, { direction: 'top', className: 'exol-tooltip' });
-        });
-
-        // Update Loop
-        function refresh() {
-            map.removeLayer(t);
-            t = L.terminator({
-                color: '#22d3ee',
-                fillColor: '#0f172a',
-                fillOpacity: 0.6,
-                weight: 1
-            }).addTo(map);
-            
-            document.getElementById('clock').innerText = new Date().toISOString().substr(11, 5);
+        const overlay = document.getElementById('status-overlay');
+        
+        // Step 1: Check if libraries loaded
+        if (typeof L === 'undefined') {
+            overlay.innerHTML = "ERROR: LEAFLET LIBRARY BLOCKED<br>Check internet/firewall.";
+            return;
         }
 
-        setInterval(refresh, 60000);
-        refresh();
+        try {
+            // Step 2: Initialize Map
+            const map = L.map('map', { 
+                center: [20, 0], 
+                zoom: 2, 
+                zoomControl: false, 
+                attributionControl: false 
+            });
+
+            // Step 3: Load Tiles (OpenStreetMap is the most reliable source)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+            // Step 4: Add Terminator (Grey Line)
+            let t = L.terminator({
+                color: '#ffcc00',
+                fillColor: '#000',
+                fillOpacity: 0.5,
+                weight: 2
+            }).addTo(map);
+
+            // Success! Hide the overlay
+            overlay.style.display = 'none';
+
+            // Step 5: Update Loop
+            function refresh() {
+                map.removeLayer(t);
+                t = L.terminator({ color: '#ffcc00', fillColor: '#000', fillOpacity: 0.5, weight: 2 }).addTo(map);
+                document.getElementById('clock').innerText = new Date().toISOString().substr(11, 5);
+            }
+
+            setInterval(refresh, 60000);
+            refresh();
+
+        } catch (e) {
+            overlay.innerHTML = "INIT ERROR: " + e.message;
+        }
     };
 </script>
 
