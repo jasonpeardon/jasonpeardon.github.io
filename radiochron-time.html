@@ -3,71 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exol Global Monitor</title>
+    <title>Exol | World Clock Monitor</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; z-index: 1; }
+        :root { 
+            --exol-yellow: #ffcc00; 
+            --bg: #000000; 
+        }
+
+        body, html { 
+            margin: 0; padding: 0; height: 100%; width: 100%; 
+            background: var(--bg); overflow: hidden; 
+        }
+
+        #map { 
+            height: 100vh; width: 100vw; z-index: 1; 
+            background: #050505; 
+        }
 
         /* Dashboard on the RIGHT */
         .dashboard {
             position: absolute; top: 20px; right: 20px; z-index: 1000;
-            background: rgba(0, 0, 0, 0.85); color: #00ffcc; padding: 20px;
-            border: 1px solid #00ffcc; border-radius: 5px; width: 240px;
-            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.9); 
+            color: var(--exol-yellow); 
+            padding: 20px;
+            border: 2px solid var(--exol-yellow); 
+            width: 260px;
+            font-family: 'Courier New', Courier, monospace;
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.3);
         }
-        h2 { margin: 0 0 15px 0; font-size: 1.1em; text-align: center; border-bottom: 1px solid #333; }
-        .clock-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.9em; }
-        .city { color: #8899a6; }
-        .time { font-weight: bold; }
-    </style>
-</head>
-<body>
 
-<div class="dashboard">
-    <h2>WORLD CLOCK</h2>
-    <div class="clock-row"><span class="city">UTC</span><span class="time" id="utc">--:--</span></div>
-    <div class="clock-row"><span class="city">NEW YORK</span><span class="time" id="nyc">--:--</span></div>
-    <div class="clock-row"><span class="city">LOS ANGELES</span><span class="time" id="lax">--:--</span></div>
-    <div class="clock-row"><span class="city">TOKYO</span><span class="time" id="tky">--:--</span></div>
-    <div class="clock-row"><span class="city">MOSCOW</span><span class="time" id="mow">--:--</span></div>
-</div>
+        h2 { 
+            margin: 0 0 15px 0; font-size: 1.2em; text-align: center; 
+            border-bottom: 2px solid var(--exol-yellow); padding-bottom: 10px; 
+        }
 
-<div id="map"></div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script>
-    // 1. Initialize Map
-    const map = L.map('map', { center: [20, 0], zoom: 2, attributionControl: false });
-
-    // 2. Use a high-reliability Tile Layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-    // 3. World Clock Function
-    function updateClocks() {
-        const now = new Date();
-        
-        const options = (tz) => ({
-            timeZone: tz,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        });
-
-        document.getElementById('utc').innerText = now.toLocaleTimeString('en-GB', options('UTC'));
-        document.getElementById('nyc').innerText = now.toLocaleTimeString('en-GB', options('America/New_York'));
-        document.getElementById('lax').innerText = now.toLocaleTimeString('en-GB', options('America/Los_Angeles'));
-        document.getElementById('tky').innerText = now.toLocaleTimeString('en-GB', options('Asia/Tokyo'));
-        document.getElementById('mow').innerText = now.toLocaleTimeString('en-GB', options('Europe/Moscow'));
-    }
-
-    setInterval(updateClocks, 1000);
-    updateClocks();
-</script>
-
-</body>
-</html>
+        .clock-row { 
+            display: flex; justify-content: space-between; 
+            margin: 12px 0; font
