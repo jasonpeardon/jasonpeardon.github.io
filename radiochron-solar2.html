@@ -47,3 +47,123 @@
             color: var(--exol-white);
             display: flex;
             align-items: center;
+            gap: 8px;
+        }
+
+        .brand-header span {
+            color: var(--exol-accent);
+        }
+
+        .solar-box {
+            background: #fff;
+            padding: 5px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .solar-image {
+            width: 100%; height: auto; display: block;
+        }
+
+        .status-footer {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 11px;
+            color: var(--exol-gray);
+        }
+
+        .status-dot {
+            height: 6px; width: 6px; background-color: var(--exol-accent);
+            border-radius: 50%; display: inline-block; margin-right: 5px;
+            box-shadow: 0 0 8px var(--exol-accent);
+        }
+
+        /* Map UI Filters for a Clean Logistics Look */
+        .leaflet-container {
+            background: var(--exol-dark) !important;
+        }
+        
+        /* Modern Grayscale/Dark Map Filter */
+        .leaflet-tile-pane {
+            filter: brightness(0.6) invert(100%) contrast(90%) hue-rotate(180deg) saturate(0.3);
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div class="brand-header">EXOL<span>.</span>OPS</div>
+    
+    <div class="solar-box">
+        <img src="https://www.hamqsl.com/solar100sc.php" class="solar-image" alt="Solar Data">
+    </div>
+
+    <div style="font-size: 12px; font-weight: 500;">
+        UTC <span id="clock" style="float: right; color: var(--exol-accent);">00:00</span>
+    </div>
+
+    <div class="status-footer">
+        <span class="status-dot"></span> PLATFORM ACTIVE
+    </div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.terminator@0.1.0/L.Terminator.js"></script>
+
+<script>
+    window.onload = function() {
+        // Initialize Map
+        var map = L.map('map', { 
+            center: [20, 0], zoom: 2.5, 
+            zoomControl: false, attributionControl: false 
+        });
+
+        // Use standard high-reliability tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // Grey Line (Terminator)
+        var t = L.terminator({
+            color: '#22d3ee', // Exol Accent Blue
+            fillColor: '#0f172a', // Exol Dark Slate
+            fillOpacity: 0.6,
+            weight: 1
+        }).addTo(map);
+
+        // Asset Markers for Atlanta and Bristol
+        const facilities = [
+            { name: "ATLANTA FACILITY", pos: [33.749, -84.388] },
+            { name: "BRISTOL SITE", pos: [43.958, -69.508] }
+        ];
+
+        facilities.forEach(f => {
+            L.circleMarker(f.pos, {
+                color: '#22d3ee',
+                fillColor: '#22d3ee',
+                fillOpacity: 0.8,
+                radius: 4
+            }).addTo(map).bindTooltip(f.name, { direction: 'top', className: 'exol-tooltip' });
+        });
+
+        // Update Loop
+        function refresh() {
+            map.removeLayer(t);
+            t = L.terminator({
+                color: '#22d3ee',
+                fillColor: '#0f172a',
+                fillOpacity: 0.6,
+                weight: 1
+            }).addTo(map);
+            
+            document.getElementById('clock').innerText = new Date().toISOString().substr(11, 5);
+        }
+
+        setInterval(refresh, 60000);
+        refresh();
+    };
+</script>
+
+</body>
+</html>
